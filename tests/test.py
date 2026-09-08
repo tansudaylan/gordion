@@ -1,3 +1,6 @@
+import sys
+
+
 def cnfg_mock():
     
     listisec = [1]
@@ -44,6 +47,9 @@ def cnfg_obsd():
 
 
 
-globals().get(sys.argv[1])()
+if len(sys.argv) > 1:
+    func = globals().get(sys.argv[1])
+    if func is not None:
+        func()
 
 
