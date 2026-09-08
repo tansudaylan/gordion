@@ -11,14 +11,14 @@ def cnfg_mock():
 
 
 def cnfg_mich():
-   
-    pathdata = '/Users/tdaylan/Documents/work/data/tpet/tdie/tesscut/'
+
+    pathdata = tdpy.ensr_path(os.path.join(tdpy.retr_pathbase('tpet'), 'data', 'tesscut'))
     listpath = fnmatch.filter(os.listdir(pathdata), 'tess*')
     for p in range(len(listpath)):
         isec = int(listpath[p][6:10])
         icam = int(listpath[p][11])
         iccd = int(listpath[p][13])
-        pathfile = pathdata + listpath[p]
+        pathfile = os.path.join(pathdata, listpath[p])
         if isec == 7 or isec == 8:
             main(isec, icam, iccd, pathfile=pathfile)
 
