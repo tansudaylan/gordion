@@ -25,10 +25,25 @@ import astropy.time
 
 import multiprocessing
 
-import tcat.main
-from lion import main as lionmain
+try:
+    import tcat.main as tcatmain
+except ModuleNotFoundError:  # pragma: no cover - optional dependency for some workflows
+    tcatmain = None
+
+try:
+    from lion import main as lionmain
+except ModuleNotFoundError:  # pragma: no cover - optional dependency for some workflows
+    lionmain = None
+
 import tdpy
 from tdpy.util import summgene
+
+
+def require_optional_dependency(module_name, dep_name):
+    if module_name is None:
+        raise ModuleNotFoundError(
+            f"{dep_name} is required for this gordion workflow but is not installed in the current environment."
+        )
 
 
 def retr_timeexec():

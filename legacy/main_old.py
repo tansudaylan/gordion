@@ -1513,7 +1513,11 @@ def cnfg_mock():
 
 def cnfg_tdie():
    
-    pathdata = '/Users/tdaylan/Documents/work/data/tesstran/tdie/tesscut/'
+    pathdata = os.environ.get('TDIE_TESSCUT_PATH', os.path.join(os.getcwd(), 'data', 'tesstran', 'tdie', 'tesscut'))
+    if not os.path.exists(pathdata):
+        altpath = os.path.join(os.path.dirname(os.getcwd()), 'data', 'tesstran', 'tdie', 'tesscut')
+        if os.path.exists(altpath):
+            pathdata = altpath
     listpath = fnmatch.filter(os.listdir(pathdata), 'tess*')
     for p in range(len(listpath)):
         isec = int(listpath[p][6:10])
