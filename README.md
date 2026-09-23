@@ -14,6 +14,15 @@ The maintained scientific entry points live under the package directory and are 
 
 The project is organized around the convention that reusable functionality stays in the library and that task-specific orchestration remains in the workflow layer, with plotting and diagnostics available for input, intermediate, and output products.
 
+## Installation
+
+```bash
+python -m pip install -e .
+export GORDION_PATH=/path/to/gordion
+```
+
+`GORDION_PATH` identifies the repository root. Keep runtime inputs in `data/` and generated pipeline outputs in `visuals/`; both directories are ignored by Git.
+
 ## Data and diagnostics
 The workflow is intended to operate on environment-configured data directories rather than workstation-specific absolute paths. The primary outputs are diagnostic plots and derived image or catalog products that can be inspected after execution.
 
