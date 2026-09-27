@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Map pixel-level variability in public TESS observations of pi Mensae."""
 
-import argparse
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +8,7 @@ from astropy.coordinates import SkyCoord
 from astroquery.mast import Tesscut
 
 import gordion
+from tdpy.cli import parse_plot_arguments
 
 
 TARGET_NAME = "pi Mensae"
@@ -42,16 +42,10 @@ def run_example(output_path: Path) -> dict[str, np.ndarray]:
     )
 
 
-def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+def parse_arguments():
+    return parse_plot_arguments(
         description="Plot Gordion variability products from public TESS data."
     )
-    parser.add_argument(
-        "--typefileplot",
-        choices=("png", "pdf"),
-        default="png",
-    )
-    return parser.parse_args()
 
 
 def main() -> int:
