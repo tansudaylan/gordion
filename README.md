@@ -6,13 +6,12 @@ Gordion is a TESS Full-Frame Image (FFI) variability analysis workflow. It is de
 ## Scientific scope
 - FFI-based variability detection and summary products for TESS data.
 - Pixel-level processing and diagnostics for image-centric analyses.
-- Reusable image and catalog plotting helpers rooted in the shared tdpy utility layer.
-- Workflow orchestration for data products that are intended to be inspected and validated before downstream modeling.
+- Temporal median images and robust relative-scatter maps.
+- Pixel time series for localizing variability within the detector image.
 
-## Active package API
-The maintained scientific entry points live under the package directory and are imported through `gordion` and `gordion.main`.
+## Variability calculation
 
-The project is organized around the convention that reusable functionality stays in the library and that task-specific orchestration remains in the workflow layer, with plotting and diagnostics available for input, intermediate, and output products.
+Gordion masks flagged TESS cadences, calculates the temporal median and robust relative scatter of each pixel, and extracts the normalized time series of selected variable pixels.
 
 ## Installation
 
@@ -24,7 +23,7 @@ export GORDION_PATH=/path/to/gordion
 `GORDION_PATH` identifies the repository root. Keep runtime inputs in `data/` and generated pipeline outputs in `visuals/`; both directories are ignored by Git.
 
 ## Data and diagnostics
-The workflow is intended to operate on environment-configured data directories rather than workstation-specific absolute paths. The primary outputs are diagnostic plots and derived image or catalog products that can be inspected after execution.
+Gordion produces detector-image summaries, pixel-variability maps, selected-pixel time series, and derived catalog products.
 
 ## Public TESS example
 
