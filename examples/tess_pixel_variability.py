@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Map pixel-level variability in public TESS observations of pi Mensae."""
 
+from tdpy.verbosity import print
+
 from pathlib import Path
 
 import numpy as np

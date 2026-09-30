@@ -1,5 +1,7 @@
 """Pixel-level variability summaries for astronomical image cubes."""
 
+from tdpy.verbosity import print
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt

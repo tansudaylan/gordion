@@ -1,3 +1,4 @@
+from tdpy.verbosity import print
 import numpy as np
 
 import time as timemodu
