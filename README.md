@@ -1,38 +1,14 @@
-# gordion
+# Gordion
 
-## Introduction
-Gordion is a TESS Full-Frame Image (FFI) variability analysis workflow. It is designed to characterize pixel-level variability in large image stacks and to expose the relevant image, catalog, and diagnostic products in a reproducible scientific workflow.
+The former TESS pixel-variability workflow now lives in [Lygos](../lygos). This repository is reserved for future work.
 
-## Scientific scope
-- FFI-based variability detection and summary products for TESS data.
-- Pixel-level processing and diagnostics for image-centric analyses.
-- Temporal median images and robust relative-scatter maps.
-- Pixel time series for localizing variability within the detector image.
+## Runtime paths
 
-## Variability calculation
-
-Gordion masks flagged TESS cadences, calculates the temporal median and robust relative scatter of each pixel, and extracts the normalized time series of selected variable pixels.
-
-## Installation
+Install the package and set its repository path before using repository-local data or visualization directories:
 
 ```bash
 python -m pip install -e .
 export GORDION_PATH=/path/to/gordion
 ```
 
-`GORDION_PATH` identifies the repository root. Keep runtime inputs in `data/` and generated pipeline outputs in `visuals/`; both directories are ignored by Git.
-
-## Data and diagnostics
-Gordion produces detector-image summaries, pixel-variability maps, selected-pixel time series, and derived catalog products.
-
-## Public TESS example
-
-The runnable example retrieves the public TESS Sector 1 cutout around $\pi$ Mensae from the Mikulski Archive for Space Telescopes and passes the observed flux cube through Gordion's pixel-variability pipeline:
-
-```bash
-python examples/tess_pixel_variability.py --typefileplot png
-```
-
-![Gordion TESS pixel-variability diagnostic](examples/tess_pixel_variability.png)
-
-The temporal median image shows the observed scene. The robust relative-scatter map identifies the detector pixel with the strongest variability, and the final panel exposes that pixel's normalized time series. The figure contains public TESS measurements rather than simulated observations.
+`GORDION_PATH` identifies the repository root. Runtime inputs and generated figures belong in `data/` and `visuals/`, which are ignored by Git.
