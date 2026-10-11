@@ -1,6 +1,6 @@
 # Gordion
 
-The former TESS pixel-variability workflow now lives in [Lygos](../lygos). This repository is reserved for future work.
+The TESS pixel-variability workflow has moved to [Lygos](../lygos). Gordion is reserved for future work; there is no active workflow here yet.
 
 ## Runtime paths
 
