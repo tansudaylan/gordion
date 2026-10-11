@@ -23,7 +23,7 @@ samples are stored in Gordion's ignored ``data/planetary_phase_space/`` folder.
 The supported modes are:
 
 * ``solar`` samples phase space and elastic-scattering trajectories inside
-  Earth, the Moon, and Mars and plots Asteria capture rates.
+  Earth, the Moon, and Mars and plots Gordion capture rates.
 * ``exoplanets`` analyzes every archive row with positive mass and radius. Its
   interior profile assumes a 0.33 core mass fraction, and the catalog's mass
   provenance is retained in the outputs.
@@ -35,10 +35,26 @@ The supported modes are:
 An interactive walkthrough is available in
 ``examples/planetary_phase_space/PlanetaryDarkMatterPhaseSpace.ipynb``.
 
+Optional Asteria comparison
+------------------------------
+
+Gordion runs independently of Asteria. Only the optional benchmark example
+imports the reference implementation. Download Asteria's Python v1.0 release
+and expose its ``asteria.py`` module on ``PYTHONPATH``.
+
+.. code-block:: console
+
+  PYTHONPATH=/path/to/Asteria/Python python examples/asteria_benchmark/run.py
+
+The example reports Jupiter capture rates from both implementations and their
+relative differences for both cross-section conventions.
+
 Physics assumptions
 -------------------
 
-The capture-rate calculation follows Asteria's homogeneous-composition formalism.
+The self-contained ``gordion.CaptureModel`` follows the homogeneous-composition
+formalism of Leane & Smirnov (2023). The old ``AsteriaCapture`` name remains
+a compatibility alias and does not require the reference package.
 The trajectory calculation instead uses spherical, piecewise-uniform layers,
 cold stationary targets, isotropic elastic scattering, and Newtonian gravity.
 It identifies capture when a scattered particle's specific orbital energy

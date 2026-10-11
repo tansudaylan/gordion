@@ -2,8 +2,10 @@
 
 import numpy as np
 import pytest
+import subprocess
+import sys
 
-from gordion.capture import AsteriaCapture, NuclearSpecies
+from gordion.capture import AsteriaCapture, CaptureModel, NuclearSpecies
 
 
 JUPITER_RADIUS_M = 7.0e7  # [m]
@@ -14,7 +16,33 @@ HALO_SPEED_M_S = 270000.0  # [m/s]
 
 @pytest.fixture
 def jupiter_capture():
-    return AsteriaCapture(((0.75, 1.0), (0.25, 4.0)))
+    return CaptureModel(((0.75, 1.0), (0.25, 4.0)))
+
+
+def test_capture_runs_without_asteria():
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import builtins
+original_import = builtins.__import__
+def block_asteria(name, *args, **kwargs):
+    if name.lower().startswith('asteria'):
+        raise ImportError('Asteria is unavailable')
+    return original_import(name, *args, **kwargs)
+builtins.__import__ = block_asteria
+from gordion import CaptureModel
+model = CaptureModel(((0.75, 1.0), (0.25, 4.0)))
+assert model.calculate(7e7, 1.898e27, 0.4, 270000, 10, 1e-34).rate_per_second > 0
+""",
+        ],
+        check=True,
+    )
+
+
+def test_legacy_capture_name_remains_compatible():
+    assert AsteriaCapture is CaptureModel
 
 
 @pytest.mark.parametrize(
@@ -78,8 +106,8 @@ def test_zero_cross_section_has_zero_capture(jupiter_capture):
 
 
 def test_composition_is_instance_scoped():
-    hydrogen = AsteriaCapture((NuclearSpecies(1.0, 1.0, "H"),))
-    iron = AsteriaCapture((NuclearSpecies(1.0, 56.0, "Fe"),))
+    hydrogen = CaptureModel((NuclearSpecies(1.0, 1.0, "H"),))
+    iron = CaptureModel((NuclearSpecies(1.0, 56.0, "Fe"),))
     hydrogen_tau = hydrogen.optical_depth(JUPITER_RADIUS_M, JUPITER_MASS_KG, 10.0, 1e-36)
     iron_tau = iron.optical_depth(JUPITER_RADIUS_M, JUPITER_MASS_KG, 10.0, 1e-36)
     assert hydrogen_tau != iron_tau

@@ -2,8 +2,9 @@ Gordion
 =======
 
 Gordion calculates dark-matter capture and phase-space distributions in
-celestial bodies. The capture module ports the multi-regime calculation in
-Asteria. Layered planetary profiles and trajectory scattering add spatial and
+celestial bodies. Its independent capture module implements the multi-regime
+treatment of Leane & Smirnov (2023), also released as Asteria. Asteria is not a
+runtime dependency. Layered planetary profiles and trajectory scattering add spatial and
 velocity distributions, including captured phase points. All particle outputs
 are represented in six-dimensional position-velocity space.
 

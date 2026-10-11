@@ -1,9 +1,13 @@
 # Gordion
 
 Gordion calculates dark-matter capture and phase-space distributions in
-celestial bodies. It ports the multi-regime capture treatment in Asteria and
-adds layered planetary profiles, elastic-scattering trajectories, weighted
+celestial bodies. Its self-contained capture implementation follows the
+multi-regime treatment of Leane & Smirnov (2023), also released as Asteria.
+Gordion combines layered planetary profiles, elastic-scattering trajectories, weighted
 six-dimensional samples, and co-rotating Lagrange-point distributions.
+
+Asteria is not a dependency. Gordion's library, planetary examples, and notebook
+run without it. Only the optional comparison example imports Asteria.
 
 The trajectory model follows particles through spherical gravity and samples
 isotropic, elastic scattering on stationary nuclei. The benchmark Earth, Moon,
@@ -68,20 +72,39 @@ explicit model profiles and co-rotating coordinates.
 
 ![Interior dark-matter speed estimates across the measured-mass/radius exoplanet catalog](examples/planetary_phase_space/visuals/all_exoplanet_velocity_distribution_20261011_224241.png)
 
-![Density profiles, escape speeds, and Asteria capture rates across CMF models](examples/planetary_phase_space/visuals/exoplanet_cmf_density_profiles_20261011_224241.png)
+![Density profiles, escape speeds, and Gordion capture rates across CMF models](examples/planetary_phase_space/visuals/exoplanet_cmf_density_profiles_20261011_224241.png)
 
 ![Co-rotating L1-L5 locations and velocity distributions in planetary systems](examples/planetary_phase_space/visuals/lagrange_point_phase_space_20261011_224241.png)
 
-![Asteria multi-regime capture rates for Earth, Moon, and Mars](examples/planetary_phase_space/visuals/solar_system_asteria_capture_20261011_224241.png)
+![Gordion multi-regime capture rates for Earth, Moon, and Mars](examples/planetary_phase_space/visuals/solar_system_asteria_capture_20261011_224241.png)
 
-## Asteria
+## Capture Model and Attribution
 
-`gordion.capture.AsteriaCapture` ports the released Asteria v1.0 capture-rate
-calculation by Leane & Smirnov (2023), including nucleon-to-nucleus scaling,
+`gordion.capture.CaptureModel` implements the capture-rate treatment
+by Leane & Smirnov (2023), including nucleon-to-nucleus scaling,
 single and multiple scattering, the weak/intermediate/strong interaction
 regimes, finite-target stopping, and the fitted reflection factor for light
 dark matter. Composition is instance-scoped, so independent bodies can be
 evaluated safely in the same process.
+
+The former `AsteriaCapture` name remains an alias for compatibility. It does
+not import or call the Asteria package.
+
+## Optional Asteria Benchmark
+
+Download the Python v1.0 release cited below and place its `asteria.py` on
+`PYTHONPATH`. Then run the comparison from the Gordion repository root.
+
+```bash
+PYTHONPATH=/path/to/Asteria/Python python examples/asteria_benchmark/run.py
+```
+
+This example imports Asteria only when invoked. It compares Jupiter capture
+rates for nucleon-scaled and nucleus-level cross sections at weak, intermediate,
+and strong interaction strengths. It prints both rates and their relative
+differences. The reported regimes come from Gordion's model.
+For NumPy 2, the example supplies the removed `np.math` alias within Asteria's
+module only. It does not change Gordion's calculations or NumPy itself.
 
 Reference: Leane & Smirnov (2023), *Dark Matter Capture in Celestial Objects:
 Treatment Across Kinematic and Interaction Regimes*,

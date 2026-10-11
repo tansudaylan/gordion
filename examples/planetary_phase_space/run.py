@@ -26,7 +26,7 @@ from gordion.bodies import (
     solar_system_bodies,
     two_layer_exoplanet,
 )
-from gordion.capture import AsteriaCapture, G
+from gordion.capture import CaptureModel, G
 from gordion.catalog import ExoplanetRecord, fetch_confirmed_exoplanets
 from gordion.lagrange import BinarySystem, lagrange_points, sample_lagrange_phase_space
 from gordion.paths import get_data_path
@@ -109,7 +109,7 @@ def _plot_solar_system(samples: int, transport_particles: int,
             seed=seed + row,
             sanity_checks=sanity_checks,
         )
-        model = AsteriaCapture(body.composition)
+        model = CaptureModel(body.composition)
         capture = model.calculate(
             body.radius_m, body.mass_kg, HALO_DENSITY_GEV_CM3,
             HALO_SPEED_M_S, DM_MASS_GEV, NUCLEON_SIGMA_CM2,
@@ -148,8 +148,8 @@ def _plot_solar_system(samples: int, transport_particles: int,
             "mass_kg": body.mass_kg,
             "radius_m": body.radius_m,
             "cmf_model": body.layers[0].mass_fraction,
-            "asteria_capture_rate_s-1": capture.rate_per_second,
-            "asteria_regime": capture.regime,
+            "capture_rate_s-1": capture.rate_per_second,
+            "capture_regime": capture.regime,
             "optical_depth": capture.optical_depth,
             "transport_captured_fraction": float(np.mean(transport.particle_status == "captured")),
             "transport_particles": transport_particles,
@@ -254,7 +254,7 @@ def _plot_cmf_grid(seed: int, tag: str) -> int:
                                                  seed=seed + row_index * 10 + int(cmf * 100))
             mean_speed = float(np.average(np.linalg.norm(samples.velocity_m_s, axis=1),
                                           weights=samples.weight))
-            cap = AsteriaCapture(body.composition).calculate(
+            cap = CaptureModel(body.composition).calculate(
                 body.radius_m, body.mass_kg, HALO_DENSITY_GEV_CM3,
                 HALO_SPEED_M_S, DM_MASS_GEV, NUCLEON_SIGMA_CM2,
                 NUCLEON_MASS_GEV,

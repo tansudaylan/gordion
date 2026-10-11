@@ -1,4 +1,4 @@
-"""Dark-matter capture rates based on the Asteria v1.0 calculation.
+"""Self-contained Gordion dark-matter capture-rate calculations.
 
 The reference implementation is Leane & Smirnov (2023), Zenodo DOI
 10.5281/zenodo.8150110, licensed CC-BY 4.0. This implementation removes the
@@ -198,8 +198,8 @@ class CaptureResult:
     reflection_fraction: float
 
 
-class AsteriaCapture:
-    """Instance-scoped port of Asteria's multi-regime capture calculation."""
+class CaptureModel:
+    """Instance-scoped multi-regime capture model requiring no Asteria imports."""
 
     def __init__(self, composition: Iterable[NuclearSpecies | tuple[float, float]]) -> None:
         self.composition = _composition(composition)
@@ -327,7 +327,7 @@ class AsteriaCapture:
                   speed_m_s: float, dm_mass_gev: float, sigma_cm2: float,
                   nucleon_mass_gev: float = 0.94,
                   scale_from_nucleon: bool = True) -> CaptureResult:
-        """Return the capture rate and Asteria kinematic-regime metadata."""
+        """Return the capture rate and kinematic-regime metadata."""
 
         _validate_inputs(radius_m, mass_kg, density_gev_cm3, speed_m_s,
                          dm_mass_gev, sigma_cm2)
@@ -379,6 +379,9 @@ class AsteriaCapture:
         return self.calculate(radius_m, mass_kg, density_gev_cm3, speed_m_s,
                               dm_mass_gev, sigma_cm2, nucleon_mass_gev,
                               scale_from_nucleon=False).rate_per_second
+
+
+AsteriaCapture = CaptureModel
 
 
 def _required_scatters(escape_m_s: float, speed_m_s: float,
