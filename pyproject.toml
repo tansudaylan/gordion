@@ -5,10 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "gordion"
 version = "0.1.0"
-description = "Reserved package for future research software."
+description = "Dark-matter capture and six-dimensional phase-space distributions in celestial bodies."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["tdpy"]
+dependencies = ["numpy>=1.24", "scipy>=1.10", "tdpy"]
+
+[project.optional-dependencies]
+examples = ["matplotlib>=3.7"]
 
 [tool.setuptools.packages.find]
 include = ["gordion*"]
