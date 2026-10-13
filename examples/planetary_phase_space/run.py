@@ -64,11 +64,10 @@ def _run_tag() -> str:
 
 
 def _save_figure(figure, name: str, tag: str) -> Path:
-    path = _visual_directory() / f"{name}_{tag}.png"
-    print(f"Writing to {path}...")
-    figure.savefig(path, dpi=240, bbox_inches="tight")
-    plt.close(figure)
-    return path
+    from tdpy.plotting import save_figure as tdpy_save_figure
+
+    path = _visual_directory() / f"{name}_{tag}"
+    return Path(tdpy_save_figure(figure, path, typefileplot="png", dpi=240, close_figure=True))
 
 
 def _write_rows(path: Path, fieldnames: list[str], rows) -> None:
