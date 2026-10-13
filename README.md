@@ -1,8 +1,8 @@
 # Gordion
 
 Capturing dark matter can take many collisions, and the motion after each one
-matters. Gordion computes capture across interaction regimes and samples the
-resulting phase space in modeled celestial bodies. Its capture model follows the
+matters. I use Gordion to calculate capture across interaction regimes and sample
+the resulting phase space in modeled celestial bodies. Its capture model follows the
 multi-regime treatment of Leane & Smirnov (2023), also released as Asteria.
 Around that core, Gordion provides layered body profiles, elastic-scattering
 trajectories, weighted six-dimensional samples, and co-rotating Lagrange-point
@@ -14,8 +14,9 @@ optional benchmark comparison imports it.
 Gordion follows particles through spherical gravity and samples isotropic
 elastic scattering on stationary nuclei. Earth, Moon, and Mars use explicit
 piecewise-uniform layers. Exoplanets use two-layer iron-core/silicate-mantle
-models, with core density chosen to match the catalog mass and radius. Use these
-profiles for model comparisons; they are not measurements of interior structure.
+models, with core density chosen to match the catalog mass and radius. I use
+these profiles to compare explicit interior assumptions. A catalog mass and
+radius do not determine a planet's full interior structure.
 
 ## Install
 
