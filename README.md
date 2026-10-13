@@ -36,6 +36,8 @@ calculations in one pass, run this from the repository root:
 python examples/planetary_phase_space/run.py --mode all
 ```
 
+Install `python -m pip install -e '.[bokeh]'` and add `--bokeh` with `--mode exoplanets` or `--mode all` to write an interactive mass, escape-speed, and phase-space-speed HTML plot beside the static catalog figure.
+
 The NASA Exoplanet Archive table downloads on the first run and is cached under
 `data/`. Use `--offline` to rerun from that snapshot or `--refresh` to retrieve
 the current table. Choose `--mode solar`, `--mode exoplanets`, `--mode cmf`, or

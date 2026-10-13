@@ -170,7 +170,7 @@ def _catalog_body(record: ExoplanetRecord, cmf: float = 0.33) -> CelestialBody:
 
 
 def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
-                     seed: int, tag: str) -> int:
+                     seed: int, tag: str, bokeh: bool = False) -> int:
     sample_rows = []
     summary_rows = []
     speed_all = []
@@ -226,12 +226,95 @@ def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
     axes[1].set(xlabel="Interior DM speed [km s$^{-1}$]", ylabel="Sample count",
                 title="Unbound 6D catalog samples")
     _save_figure(fig, "all_exoplanet_velocity_distribution", tag)
+    if bokeh:
+        _plot_bokeh_exoplanet_summary(
+            summary_rows,
+            np.asarray(speed_all),
+            _visual_directory() / f"all_exoplanet_velocity_distribution_{tag}.html",
+        )
     output_dir = _data_directory()
     _write_rows(output_dir / f"exoplanet_phase_space_summary_{tag}.csv",
                 list(summary_rows[0]), summary_rows)
     _write_rows(output_dir / f"exoplanet_phase_space_samples_{tag}.csv",
                 list(sample_rows[0]), sample_rows)
     return len(summary_rows)
+
+
+def _plot_bokeh_exoplanet_summary(summary_rows: list[dict], speed_all: np.ndarray,
+                                  output_path: Path) -> Path:
+    """Write interactive catalog-mass and interior-speed views."""
+    from bokeh.layouts import row
+    from bokeh.models import ColorBar, ColumnDataSource, HoverTool, LinearColorMapper
+    from bokeh.palettes import Viridis256
+    from bokeh.plotting import figure
+    from tdpy.plotting import save_bokeh_html
+
+    source = ColumnDataSource({
+        "planet": [row["planet"] for row in summary_rows],
+        "host": [row["host"] for row in summary_rows],
+        "mass_earth": [row["mass_earth"] for row in summary_rows],
+        "escape_speed": [row["surface_escape_speed_km_s"] for row in summary_rows],
+        "mean_speed": [row["mean_interior_dm_speed_km_s"] for row in summary_rows],
+        "mass_provenance": [row["mass_provenance"] for row in summary_rows],
+    })
+    low = float(np.min(source.data["mean_speed"]))
+    high = float(np.max(source.data["mean_speed"]))
+    if high <= low:
+        high = low + 1.0
+    color_mapper = LinearColorMapper(palette=Viridis256, low=low, high=high)
+    scatter = figure(
+        title="Exoplanet mass and surface escape speed",
+        x_axis_type="log",
+        width=620,
+        height=430,
+        sizing_mode="stretch_width",
+        tools="pan,wheel_zoom,box_zoom,reset,save",
+    )
+    scatter.scatter(
+        "mass_earth",
+        "escape_speed",
+        source=source,
+        size=7,
+        alpha=0.72,
+        color={"field": "mean_speed", "transform": color_mapper},
+    )
+    scatter.add_layout(ColorBar(color_mapper=color_mapper, title="Mean DM speed [km/s]"), "right")
+    scatter.add_tools(HoverTool(tooltips=[
+        ("Planet", "@planet"), ("Host", "@host"),
+        ("Mass [M⊕]", "@mass_earth{0.00}"),
+        ("Escape speed [km/s]", "@escape_speed{0.00}"),
+        ("Mean DM speed [km/s]", "@mean_speed{0.00}"),
+        ("Mass source", "@mass_provenance"),
+    ]))
+    scatter.xaxis.axis_label = "Planet mass [Earth masses]"
+    scatter.yaxis.axis_label = "Surface escape speed [km/s]"
+    scatter.grid.visible = False
+
+    histogram, edges = np.histogram(speed_all, bins=32)
+    distribution = figure(
+        title="Unbound catalog speed samples",
+        width=480,
+        height=430,
+        sizing_mode="stretch_width",
+        tools="pan,wheel_zoom,box_zoom,reset,save",
+    )
+    distribution.quad(
+        top=histogram,
+        bottom=0,
+        left=edges[:-1],
+        right=edges[1:],
+        fill_color="#007360",
+        line_color="white",
+        fill_alpha=0.75,
+    )
+    distribution.xaxis.axis_label = "Interior DM speed [km/s]"
+    distribution.yaxis.axis_label = "Sample count"
+    distribution.grid.visible = False
+    return Path(save_bokeh_html(
+        row(scatter, distribution, sizing_mode="stretch_width"),
+        output_path,
+        title="Gordion exoplanet phase-space catalog",
+    ))
 
 
 def _plot_cmf_grid(seed: int, tag: str) -> int:
@@ -375,6 +458,8 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--sanity-checks", action="store_true",
                         help="check elastic-scatter energy and momentum conservation")
+    parser.add_argument("--bokeh", action="store_true",
+                        help="also write an interactive exoplanet catalog plot")
     arguments = parser.parse_args()
     if arguments.samples < 1 or arguments.catalog_samples < 1 or arguments.transport_particles < 1:
         parser.error("sample counts must be positive")
@@ -391,11 +476,14 @@ def main() -> int:
         )
     if arguments.limit_planets is not None:
         records = records[:arguments.limit_planets]
+    if arguments.bokeh and arguments.mode not in {"all", "exoplanets"}:
+        parser.error("--bokeh is available with --mode all or --mode exoplanets")
     if arguments.mode in {"all", "solar"}:
         _plot_solar_system(arguments.samples, arguments.transport_particles,
                            arguments.sanity_checks, arguments.seed, tag)
     if arguments.mode in {"all", "exoplanets"}:
-        _plot_exoplanets(records, arguments.catalog_samples, arguments.seed, tag)
+        _plot_exoplanets(records, arguments.catalog_samples, arguments.seed, tag,
+                         bokeh=arguments.bokeh)
     if arguments.mode in {"all", "cmf"}:
         _plot_cmf_grid(arguments.seed, tag)
     if arguments.mode in {"all", "lagrange"}:
