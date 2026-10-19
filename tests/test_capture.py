@@ -5,6 +5,12 @@ import pytest
 import subprocess
 import sys
 
+from gordion.bodies import (
+    EARTH_RADIUS_M,
+    JUPITER_MASS_KG,
+    JUPITER_RADIUS_M,
+    two_layer_exoplanet,
+)
 from gordion.capture import AsteriaCapture, CaptureModel, NuclearSpecies
 
 
@@ -93,6 +99,35 @@ def test_capture_result_exposes_regime_and_optical_depth(jupiter_capture):
     assert result.regime == "multiscatter"
     assert result.optical_depth > 1.5
     assert 0.0 <= result.reflection_fraction <= 1.0
+    assert result.rate_per_second <= result.geometric_rate_per_second
+
+
+def test_heavy_asymptotic_capture_reaches_reflection_limited_rate():
+    mass_jupiter = 0.00103  # [M_J]
+    radius_jupiter = 0.067  # [R_J]
+    mass_earth = mass_jupiter * 317.83  # [M_earth]
+    radius_earth = radius_jupiter * JUPITER_RADIUS_M / EARTH_RADIUS_M  # [R_earth]
+    bulk_density = mass_earth / radius_earth**3 * 5513.4  # [kg m^-3]
+    core_density = max(11000.0, 1.05 * 0.33 * bulk_density)  # [kg m^-3]
+    body = two_layer_exoplanet(
+        "Rocky asymptotic-regime benchmark",
+        mass_earth,
+        radius_earth,
+        0.33,
+        core_density_kg_m3=core_density,
+    )
+    result = CaptureModel(body.composition).calculate(
+        body.radius_m,
+        body.mass_kg,
+        HALO_DENSITY_GEV_CM3,
+        HALO_SPEED_M_S,
+        1000.0,
+        1e-32,
+    )
+
+    assert result.regime == "asymptotic-multiscatter"
+    assert result.optical_depth >= 1e6
+    assert result.rate_per_second >= 0.9 * result.geometric_rate_per_second
     assert result.rate_per_second <= result.geometric_rate_per_second
 
 

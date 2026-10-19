@@ -171,6 +171,7 @@ def _capture_kinematic_asymptote(speed_m_s: float, escape_m_s: float,
             - 4.0 * scatters * (3.0 * (mu - 2.0) * mu + 5.0) * (3.0 * ratio - 4.0)
         )
         denominator = 8.0 * mu**4 * (3.0 * escape_m_s**2 * speed_m_s**2 + 2.0 * speed_m_s**4)
+        numerator *= 3.0 * scatters * escape_m_s**4
     else:
         numerator = (
             24.0

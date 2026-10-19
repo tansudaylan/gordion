@@ -15,6 +15,7 @@ matplotlib.use("agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from tdpy.verbosity import print
+from tdpy.plotting import configure_plot_style, plot_style, themed_plot
 
 from gordion.bodies import (
     EARTH_MASS_KG,
@@ -63,6 +64,7 @@ def _run_tag() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
 
 
+@themed_plot
 def _save_figure(figure, name: str, tag: str) -> Path:
     from tdpy.plotting import save_figure as tdpy_save_figure
 
@@ -87,6 +89,7 @@ def _halo(body_velocity_m_s=(LOCAL_STANDARD_OF_REST_M_S, 0.0, 0.0)) -> HaloModel
     )
 
 
+@themed_plot
 def _plot_solar_system(samples: int, transport_particles: int,
                        sanity_checks: bool, seed: int, tag: str) -> list[dict]:
     bodies = solar_system_bodies()
@@ -169,6 +172,7 @@ def _catalog_body(record: ExoplanetRecord, cmf: float = 0.33) -> CelestialBody:
                                core_density_kg_m3=core_density)
 
 
+@themed_plot
 def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
                      seed: int, tag: str, bokeh: bool = False) -> int:
     sample_rows = []
@@ -240,6 +244,7 @@ def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
     return len(summary_rows)
 
 
+@themed_plot
 def _plot_bokeh_exoplanet_summary(summary_rows: list[dict], speed_all: np.ndarray,
                                   output_path: Path) -> Path:
     """Write interactive catalog-mass and interior-speed views."""
@@ -317,6 +322,7 @@ def _plot_bokeh_exoplanet_summary(summary_rows: list[dict], speed_all: np.ndarra
     ))
 
 
+@themed_plot
 def _plot_cmf_grid(seed: int, tag: str) -> int:
     templates = (("Earth-size rocky", 1.0, 1.0),
                  ("Super-Earth", 5.0, 1.5),
@@ -386,6 +392,7 @@ def _catalog_lagrange_systems(records: list[ExoplanetRecord]) -> list[BinarySyst
     return selected
 
 
+@themed_plot
 def _plot_lagrange_points(records: list[ExoplanetRecord], samples: int,
                           seed: int, tag: str) -> int:
     earth_a = 1.495978707e11  # [m]
@@ -441,6 +448,7 @@ def _plot_lagrange_points(records: list[ExoplanetRecord], samples: int,
     return len(systems)
 
 
+@plot_style()
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("all", "solar", "exoplanets", "cmf", "lagrange"),
@@ -460,7 +468,9 @@ def main() -> int:
                         help="check elastic-scatter energy and momentum conservation")
     parser.add_argument("--bokeh", action="store_true",
                         help="also write an interactive exoplanet catalog plot")
+    parser.add_argument('--typeplotback', choices=('white', 'dark'), default='white')
     arguments = parser.parse_args()
+    configure_plot_style(arguments.typeplotback)
     if arguments.samples < 1 or arguments.catalog_samples < 1 or arguments.transport_particles < 1:
         parser.error("sample counts must be positive")
     tag = _run_tag()

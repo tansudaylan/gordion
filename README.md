@@ -39,6 +39,11 @@ python examples/planetary_phase_space/run.py --mode all
 
 Install `python -m pip install -e '.[bokeh]'` and add `--bokeh` with `--mode exoplanets` or `--mode all` to write an interactive mass, escape-speed, and phase-space-speed HTML plot beside the static catalog figure.
 
+The phase-space example uses white backgrounds with black axes. Add
+`--typeplotback dark` to use black backgrounds with white axes in both static
+and interactive plots. Its plotting functions accept the same selection from
+Python and otherwise inherit an enclosing TDpy `plot_style()` theme.
+
 The NASA Exoplanet Archive table downloads on the first run and is cached under
 `data/`. Use `--offline` to rerun from that snapshot or `--refresh` to retrieve
 the current table. Choose `--mode solar`, `--mode exoplanets`, `--mode cmf`, or
@@ -113,14 +118,3 @@ Reference: Leane & Smirnov (2023), *Dark Matter Capture in Celestial Objects:
 Treatment Across Kinematic and Interaction Regimes*,
 [arXiv:2309.00669](https://arxiv.org/abs/2309.00669). Asteria v1.0 is
 [CC-BY 4.0 on Zenodo](https://doi.org/10.5281/zenodo.8150110).
-
-## Runtime paths
-
-Install the package and set its repository path before using repository-local data or visualization directories:
-
-```bash
-python -m pip install -e .
-export GORDION_PATH=/path/to/gordion
-```
-
-`GORDION_PATH` identifies the repository root. Runtime inputs and generated figures belong in `data/` and `visuals/`, which are ignored by Git.
