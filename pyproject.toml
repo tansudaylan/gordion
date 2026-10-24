@@ -8,7 +8,11 @@ version = "0.1.0"
 description = "Dark-matter capture and six-dimensional phase-space distributions in celestial bodies."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.24", "scipy>=1.10", "tdpy"]
+dependencies = [
+	"numpy>=1.24",
+	"scipy>=1.10",
+	"tdpy @ git+https://github.com/tansudaylan/tdpy.git@35df1703c6b63d6a62f7d44b12cf5928b5d355ed",
+]
 
 [project.optional-dependencies]
 bokeh = ["bokeh>=3.4"]
