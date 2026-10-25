@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 from datetime import datetime, timezone
+from itertools import product
 from pathlib import Path
 
 import matplotlib
@@ -174,12 +175,22 @@ def _catalog_body(record: ExoplanetRecord, cmf: float = 0.33) -> CelestialBody:
 
 @themed_plot
 def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
-                     seed: int, tag: str, bokeh: bool = False) -> int:
+                     seed: int, tag: str, bokeh: bool = False,
+                     core_mass_fractions=(0.33,)) -> int:
+    if np.ma.is_masked(core_mass_fractions):
+        raise ValueError('Core mass fractions must be unmasked values')
+    cmfs = np.asarray(core_mass_fractions, dtype=float)
+    if (cmfs.ndim != 1 or cmfs.size == 0 or not np.isfinite(cmfs).all()
+            or np.any(cmfs < 0.0) or np.any(cmfs > 1.0)
+            or len(np.unique(cmfs)) != len(cmfs)):
+        raise ValueError('Core mass fractions must be distinct finite values between zero and one')
+    if not records:
+        raise ValueError('Provide at least one eligible exoplanet record')
     sample_rows = []
     summary_rows = []
     speed_all = []
-    for index, record in enumerate(records):
-        body = _catalog_body(record)
+    for (index, record), cmf in product(enumerate(records), cmfs):
+        body = _catalog_body(record, float(cmf))
         orbital_speed = 0.0
         if record.period_days is not None and record.host_mass_solar is not None:
             star_mass = record.host_mass_solar * SUN_MASS_KG
@@ -199,7 +210,9 @@ def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
             "mass_provenance": record.mass_provenance,
             "mass_earth": mass_earth,
             "radius_earth": radius_earth,
-            "assumed_cmf": 0.33,
+            "assumed_cmf": float(cmf),
+            "inner_density_kg_m3": body.density_kg_m3(0.0),
+            "outer_density_kg_m3": body.density_kg_m3(0.99 * body.radius_m),
             "mean_density_kg_m3": body.mass_kg / (4.0 * np.pi * body.radius_m**3 / 3.0),
             "surface_escape_speed_km_s": body.escape_speed_m_s(body.radius_m) / 1000.0,
             "mean_interior_dm_speed_km_s": float(np.average(speed, weights=samples.weight) / 1000.0),
@@ -212,6 +225,7 @@ def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
                 "planet": record.name,
                 "host": record.host_name,
                 "mass_provenance": record.mass_provenance,
+                "assumed_cmf": float(cmf),
                 "x_m": point[0], "y_m": point[1], "z_m": point[2],
                 "vx_m_s": velocity[0], "vy_m_s": velocity[1], "vz_m_s": velocity[2],
                 "weight": weight,
@@ -224,7 +238,7 @@ def _plot_exoplanets(records: list[ExoplanetRecord], samples_per_planet: int,
                              cmap="viridis", rasterized=True)
     axes[0].set(xscale="log", xlabel="Planet mass [Earth masses]",
                 ylabel="Surface escape speed [km s$^{-1}$]",
-                title="Catalog planets with measured mass and radius")
+                title="Catalog mass-radius interior models")
     fig.colorbar(points, ax=axes[0], label="Mean interior DM speed [km s$^{-1}$]")
     axes[1].hist(speed_all, bins=32, color="#007360", histtype="step", linewidth=1.5)
     axes[1].set(xlabel="Interior DM speed [km s$^{-1}$]", ylabel="Sample count",
@@ -261,6 +275,9 @@ def _plot_bokeh_exoplanet_summary(summary_rows: list[dict], speed_all: np.ndarra
         "escape_speed": [row["surface_escape_speed_km_s"] for row in summary_rows],
         "mean_speed": [row["mean_interior_dm_speed_km_s"] for row in summary_rows],
         "mass_provenance": [row["mass_provenance"] for row in summary_rows],
+        "core_mass_fraction": [row.get("assumed_cmf", np.nan) for row in summary_rows],
+        "inner_density": [row.get("inner_density_kg_m3", np.nan) for row in summary_rows],
+        "outer_density": [row.get("outer_density_kg_m3", np.nan) for row in summary_rows],
     })
     low = float(np.min(source.data["mean_speed"]))
     high = float(np.max(source.data["mean_speed"]))
@@ -289,6 +306,9 @@ def _plot_bokeh_exoplanet_summary(summary_rows: list[dict], speed_all: np.ndarra
         ("Mass [M⊕]", "@mass_earth{0.00}"),
         ("Escape speed [km/s]", "@escape_speed{0.00}"),
         ("Mean DM speed [km/s]", "@mean_speed{0.00}"),
+        ("Core mass fraction", "@core_mass_fraction{0.00}"),
+        ("Inner density [kg/m^3]", "@inner_density{0.0}"),
+        ("Outer density [kg/m^3]", "@outer_density{0.0}"),
         ("Mass source", "@mass_provenance"),
     ]))
     scatter.xaxis.axis_label = "Planet mass [Earth masses]"
@@ -457,6 +477,8 @@ def main() -> int:
                         help="phase-space samples per Solar System body or Lagrange point")
     parser.add_argument("--transport-particles", type=int, default=128)
     parser.add_argument("--catalog-samples", type=int, default=12)
+    parser.add_argument('--catalog-cmfs', type=float, nargs='+', default=[0.33],
+                        help='core mass fractions evaluated for every eligible catalog planet')
     parser.add_argument("--limit-planets", type=int,
                         help="limit catalog rows for a quick development run")
     parser.add_argument("--offline", action="store_true",
@@ -473,6 +495,10 @@ def main() -> int:
     configure_plot_style(arguments.typeplotback)
     if arguments.samples < 1 or arguments.catalog_samples < 1 or arguments.transport_particles < 1:
         parser.error("sample counts must be positive")
+    if (not np.isfinite(arguments.catalog_cmfs).all()
+            or any(value < 0.0 or value > 1.0 for value in arguments.catalog_cmfs)
+            or len(set(arguments.catalog_cmfs)) != len(arguments.catalog_cmfs)):
+        parser.error('--catalog-cmfs must be distinct finite fractions between zero and one')
     tag = _run_tag()
     need_catalog = arguments.mode in {"all", "exoplanets", "lagrange"}
     records = []
@@ -493,7 +519,7 @@ def main() -> int:
                            arguments.sanity_checks, arguments.seed, tag)
     if arguments.mode in {"all", "exoplanets"}:
         _plot_exoplanets(records, arguments.catalog_samples, arguments.seed, tag,
-                         bokeh=arguments.bokeh)
+                         bokeh=arguments.bokeh, core_mass_fractions=arguments.catalog_cmfs)
     if arguments.mode in {"all", "cmf"}:
         _plot_cmf_grid(arguments.seed, tag)
     if arguments.mode in {"all", "lagrange"}:

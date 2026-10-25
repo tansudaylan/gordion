@@ -6,6 +6,7 @@ import importlib
 import math
 
 import numpy as np
+from tdpy.verbosity import print
 
 from gordion.capture import CaptureModel
 

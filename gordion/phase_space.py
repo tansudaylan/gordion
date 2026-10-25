@@ -13,7 +13,7 @@ from .capture import G, GEV_TO_KG, NuclearSpecies, _nucleus_cross_section
 
 @dataclass(frozen=True)
 class HaloModel:
-    """Shifted, truncated Maxwellian halo in the celestial body's frame."""
+    """Maxwellian truncated in the Galactic frame, then shifted to the body."""
 
     density_gev_cm3: float = 0.4  # [GeV/cm^3]
     speed_scale_m_s: float = 220000.0  # [m/s]
@@ -78,17 +78,22 @@ class TransportResult:
 def _sample_halo_velocity(halo: HaloModel, number: int,
                           rng: np.random.Generator) -> np.ndarray:
     sigma = halo.speed_scale_m_s / np.sqrt(2.0)
-    mean = -np.asarray(halo.body_velocity_m_s, dtype=float)
+    body_velocity = np.asarray(halo.body_velocity_m_s, dtype=float)
     accepted: list[np.ndarray] = []
     remaining = number
     while remaining:
-        proposal = rng.normal(mean, sigma, size=(max(remaining * 2, 32), 3))
-        selected = proposal[np.linalg.norm(proposal, axis=1) < halo.galactic_escape_speed_m_s]
+        galactic_velocity = rng.normal(
+            0.0, sigma, size=(max(remaining * 2, 32), 3)
+        )
+        selected = galactic_velocity[
+            np.linalg.norm(galactic_velocity, axis=1)
+            < halo.galactic_escape_speed_m_s
+        ]
         if selected.size:
             take = selected[:remaining]
             accepted.append(take)
             remaining -= len(take)
-    return np.concatenate(accepted, axis=0)
+    return np.concatenate(accepted, axis=0) - body_velocity
 
 
 def sample_unbound_phase_space(body: CelestialBody, number: int,
@@ -138,7 +143,8 @@ def _unit_perpendicular(vector: np.ndarray, rng: np.random.Generator) -> np.ndar
 
 def sample_surface_inflow(body: CelestialBody, number: int,
                           halo: HaloModel = HaloModel(), *,
-                          seed: int | None = None) -> tuple[PhaseSpaceEnsemble, np.ndarray]:
+                          seed: int | np.random.SeedSequence | None = None
+                          ) -> tuple[PhaseSpaceEnsemble, np.ndarray]:
     """Sample gravitationally focused halo trajectories at the body surface.
 
     Returns the incident phase points and their flux weights in m^3/s. A
@@ -235,8 +241,11 @@ def simulate_capture_trajectories(
         raise ValueError("transport parameters must be finite")
     if min(dm_mass_gev, nucleon_mass_gev, step_fraction) <= 0.0 or sigma_cm2 < 0.0:
         raise ValueError("masses and step_fraction must be positive; sigma cannot be negative")
-    rng = np.random.default_rng(seed)
-    initial, flux_weight = sample_surface_inflow(body, number, halo, seed=seed)
+    inflow_seed, scattering_seed = np.random.SeedSequence(seed).spawn(2)
+    rng = np.random.default_rng(scattering_seed)
+    initial, flux_weight = sample_surface_inflow(
+        body, number, halo, seed=inflow_seed
+    )
     sample_position: list[np.ndarray] = []
     sample_velocity: list[np.ndarray] = []
     sample_weight: list[float] = []

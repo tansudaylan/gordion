@@ -64,6 +64,8 @@ def test_exoplanet_phase_space_bokeh_view_writes_html(tmp_path, monkeypatch, typ
     assert output_path.is_file()
     assert "Planet b" in html
     assert "Mean DM speed" in html
+    assert "Core mass fraction" in html
+    assert "Inner density" in html
     assert len(captured) == 1
 
 
@@ -85,6 +87,40 @@ def test_phase_space_cli_applies_requested_theme(monkeypatch, typeplotback):
         assert example.main() == 0
         assert dict(example.plt.rcParams) == original
         assert len(calls) == 1
+
+
+def test_catalog_phase_space_covers_each_planet_and_cmf(tmp_path, monkeypatch):
+    import csv
+    from gordion.catalog import ExoplanetRecord
+
+    records = [
+        ExoplanetRecord('Earth analog', 'Host A', 1.0 / example.EARTH_MASSES_PER_JUPITER,
+                        1.0 / example.EARTH_RADII_PER_JUPITER, 'measured', None, None),
+        ExoplanetRecord('Super-Earth', 'Host B', 5.0 / example.EARTH_MASSES_PER_JUPITER,
+                        1.5 / example.EARTH_RADII_PER_JUPITER, 'estimated', 10.0, 1.0),
+    ]
+    monkeypatch.setattr(example, '_visual_directory', lambda: tmp_path)
+    monkeypatch.setattr(example, '_data_directory', lambda: tmp_path)
+    assert example._plot_exoplanets(records, 12, 17, 'grid', core_mass_fractions=[0.1, 0.33, 0.7]) == 6
+    with (tmp_path / 'exoplanet_phase_space_summary_grid.csv').open(newline='') as stream:
+        summaries = list(csv.DictReader(stream))
+    with (tmp_path / 'exoplanet_phase_space_samples_grid.csv').open(newline='') as stream:
+        samples = list(csv.DictReader(stream))
+    assert len(summaries) == 6 and len(samples) == 72
+    expected = {(record.name, fraction) for record in records for fraction in (0.1, 0.33, 0.7)}
+    assert {(row['planet'], float(row['assumed_cmf'])) for row in summaries} == expected
+    assert {(row['planet'], float(row['assumed_cmf'])) for row in samples} == expected
+    assert all(float(row['inner_density_kg_m3']) > float(row['outer_density_kg_m3']) for row in summaries)
+    assert example._plot_exoplanets(records, 12, 17, 'default') == 2
+    with (tmp_path / 'exoplanet_phase_space_samples_default.csv').open(newline='') as stream:
+        original = list(csv.DictReader(stream))
+    assert [row for row in samples if float(row['assumed_cmf']) == 0.33] == original
+
+
+@pytest.mark.parametrize('fractions', [[], [-0.1], [1.1], [np.nan], [np.inf], [0.3, 0.3]])
+def test_catalog_cmf_grid_rejects_invalid_values(fractions):
+    with pytest.raises(ValueError, match='Core mass fractions'):
+        example._plot_exoplanets([], 12, 17, 'invalid', core_mass_fractions=fractions)
 
 
 def test_cmf_grid_themes_leave_seeded_numerical_results_unchanged(tmp_path, monkeypatch):

@@ -11,6 +11,7 @@ from gordion.bodies import (
     JUPITER_RADIUS_M,
     two_layer_exoplanet,
 )
+from gordion import evolve_capture_annihilation
 from gordion.capture import AsteriaCapture, CaptureModel, NuclearSpecies
 
 
@@ -18,6 +19,43 @@ JUPITER_RADIUS_M = 7.0e7  # [m]
 JUPITER_MASS_KG = 1.898e27  # [kg]
 HALO_DENSITY_GEV_CM3 = 0.4  # [GeV/cm^3]
 HALO_SPEED_M_S = 270000.0  # [m/s]
+
+
+def test_capture_annihilation_evolution_matches_analytic_solution():
+    capture_rate_per_second = 4.0  # [s^-1]
+    annihilation_coefficient_per_second = 0.25  # [s^-1]
+    age_s = 2.0  # [s]
+    result = evolve_capture_annihilation(
+        capture_rate_per_second, annihilation_coefficient_per_second, age_s
+    )
+    expected_fraction = np.tanh(age_s) ** 2
+
+    assert result.captured_particles == pytest.approx(4.0 * np.tanh(age_s))
+    assert result.equilibrium_fraction == pytest.approx(expected_fraction)
+    assert result.annihilation_rate_per_second == pytest.approx(
+        0.5 * capture_rate_per_second * expected_fraction
+    )
+
+
+def test_capture_annihilation_without_annihilation_has_linear_growth():
+    capture_rate_per_second = 2.0  # [s^-1]
+    age_s = 3.0  # [s]
+    result = evolve_capture_annihilation(capture_rate_per_second, 0.0, age_s)
+
+    assert result.captured_particles == pytest.approx(6.0)
+    assert result.annihilation_rate_per_second == 0.0
+    assert result.equilibrium_fraction == 0.0
+    assert np.isinf(result.equilibration_timescale_s)
+
+
+@pytest.mark.parametrize(
+    "parameters",
+    ((-1.0, 1.0, 1.0), (1.0, -1.0, 1.0), (1.0, 1.0, -1.0),
+     (np.nan, 1.0, 1.0)),
+)
+def test_capture_annihilation_rejects_invalid_inputs(parameters):
+    with pytest.raises(ValueError, match="finite and nonnegative"):
+        evolve_capture_annihilation(*parameters)
 
 
 @pytest.fixture
@@ -81,13 +119,23 @@ def test_nucleon_scaling_and_nucleus_cross_section_differ(jupiter_capture):
     assert scaled > unscaled > 0.0
 
 
-def test_no_scaling_matches_asteria_v1_jupiter_reference(jupiter_capture):
+@pytest.mark.parametrize(
+    ("sigma_cm2", "expected_rate"),
+    (
+        (1e-38, 1.805279673e19),
+        (1e-32, 1.726779289e26),
+        (1e-28, 1.748296812e26),
+    ),
+)
+def test_no_scaling_matches_asteria_v1_jupiter_reference(
+    jupiter_capture, sigma_cm2, expected_rate
+):
     result = jupiter_capture.multicapture_noA(
         JUPITER_RADIUS_M, JUPITER_MASS_KG, HALO_DENSITY_GEV_CM3,
-        HALO_SPEED_M_S, 0.94, 1e-28, 10.0,
+        HALO_SPEED_M_S, 0.94, sigma_cm2, 10.0,
     )
 
-    assert result == pytest.approx(1.7482968119238156e26, rel=2e-3)
+    assert result == pytest.approx(expected_rate, rel=2e-3)
 
 
 def test_capture_result_exposes_regime_and_optical_depth(jupiter_capture):
@@ -146,3 +194,21 @@ def test_composition_is_instance_scoped():
     hydrogen_tau = hydrogen.optical_depth(JUPITER_RADIUS_M, JUPITER_MASS_KG, 10.0, 1e-36)
     iron_tau = iron.optical_depth(JUPITER_RADIUS_M, JUPITER_MASS_KG, 10.0, 1e-36)
     assert hydrogen_tau != iron_tau
+
+
+def test_mixed_target_mass_is_optical_depth_weighted():
+    composition = (NuclearSpecies(0.4, 16.0, "O"), NuclearSpecies(0.6, 56.0, "Fe"))
+    model = CaptureModel(composition)
+    optical_depths = np.array([
+        species.mass_fraction * CaptureModel((NuclearSpecies(1.0, species.mass_number),))
+        .optical_depth(JUPITER_RADIUS_M, JUPITER_MASS_KG, 10.0, 1e-36)
+        for species in composition
+    ])
+    expected = sum(depth * species.mass_number
+                   for depth, species in zip(optical_depths, composition)) / sum(optical_depths)
+
+    target_mass = model._effective_target_mass(
+        JUPITER_RADIUS_M, JUPITER_MASS_KG, 10.0, 1e-36, 0.94, True
+    )
+
+    assert target_mass == pytest.approx(expected)

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "gordion"
 version = "0.1.0"
-description = "Dark-matter capture and six-dimensional phase-space distributions in celestial bodies."
+description = "Dark-matter capture, annihilation histories, phase-space and three-body retention calculations."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

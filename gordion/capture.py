@@ -64,7 +64,12 @@ def geometric_capture_rate(
     speed_m_s: float,
     dm_mass_gev: float,
 ) -> float:
-    """Return the gravitationally focused geometric rate in particles/s."""
+    """Return the Asteria-convention effective-speed geometric rate in s^-1.
+
+    ``speed_m_s`` is the RMS effective speed. The factor 3/2 in the focusing
+    term follows the Maxwellian moment relation; the flux prefactor uses the
+    RMS speed in place of the exact mean speed for rate-model parity.
+    """
 
     _validate_inputs(radius_m, mass_kg, density_gev_cm3, speed_m_s, dm_mass_gev, 1.0)
     focusing = 1.0 + 1.5 * (escape_speed(radius_m, mass_kg) / speed_m_s) ** 2
@@ -226,6 +231,14 @@ class CaptureModel:
     def _effective_target_mass(self, radius_m: float, mass_kg: float, dm_mass_gev: float,
                                sigma_cm2: float, nucleon_mass_gev: float,
                                scale_from_nucleon: bool) -> float:
+        """Return the optical-depth-weighted target mass used above one scatter.
+
+        Thin-regime capture sums species rates separately. In the thick regime,
+        the species optical depths are summed and their target masses are
+        combined as ``sum(tau_i * A_i) / sum(tau_i)`` before evaluating the
+        multiscatter capture probability. This bulk-mixture approximation does
+        not follow a sequence of species-specific collisions.
+        """
         weights = []
         for species in self.composition:
             sigma_target = _nucleus_cross_section(
