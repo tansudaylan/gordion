@@ -10,7 +10,7 @@ reference package's mutable global composition and preserves its units: radius
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import ceil, exp, log, pi, sqrt
+from math import ceil, exp, expm1, log, log1p, pi, sqrt
 from typing import Iterable
 
 import numpy as np
@@ -132,13 +132,25 @@ def _scatter_probability(optical_depth: float, scatters: int | float) -> float:
 
 def _capture_probability(speed_m_s: float, escape_m_s: float, dm_mass_gev: float,
                          target_mass_gev: float, scatters: float) -> float:
-    ratio = (escape_m_s / speed_m_s) ** 2
-    mu = dm_mass_gev / target_mass_gev
-    alpha = max(1.0 - 2.0 * mu / (1.0 + mu) ** 2, np.finfo(float).tiny)
-    exponent = -1.5 * ratio * (alpha ** (-scatters) - 1.0)
-    return float(np.clip(1.0 - exp(max(exponent, -745.0)) *
-                         (1.0 + 1.5 * ratio * alpha ** (-scatters)) /
-                         (1.0 + 1.5 * ratio), 0.0, 1.0))
+    """Evaluate the capture probability without inverse-power cancellation.
+
+    With ``x = a * (alpha**(-scatters) - 1)`` and ``a = 1.5 * (vesc/v)**2``,
+    the probability is ``gammainc(2, x) + exp(-x) * x * a / (1 + a)``.
+    """
+    focusing = 1.5 * (escape_m_s / speed_m_s) ** 2
+    mass_ratio = min(dm_mass_gev, target_mass_gev) / max(dm_mass_gev, target_mass_gev)
+    fractional_loss = 2.0 * mass_ratio / (1.0 + mass_ratio) ** 2
+    log_gain = -scatters * log1p(-fractional_loss)
+    if log_gain < 1.0:
+        exponent_size = focusing * expm1(log_gain)
+    else:
+        log_exponent = log(focusing) + log_gain + log1p(-exp(-log_gain))
+        if log_exponent > log(np.finfo(float).max):
+            return 1.0
+        exponent_size = exp(log_exponent)
+    probability = (gammainc(2.0, exponent_size)
+                   + exp(-exponent_size) * exponent_size * (focusing / (1.0 + focusing)))
+    return float(np.clip(probability, 0.0, 1.0))
 
 
 def _reflection_fraction(speed_m_s: float, escape_m_s: float, mass_ratio: float) -> float:
@@ -222,6 +234,8 @@ class CaptureModel:
                 radius_m, mass_kg, species.mass_number
             )
         tau *= 1.5
+        if tau == 0.0:
+            return 0.0
         if not scale_from_nucleon:
             target_mass = self._effective_target_mass(radius_m, mass_kg, dm_mass_gev,
                                                       sigma_cm2, nucleon_mass_gev, False)

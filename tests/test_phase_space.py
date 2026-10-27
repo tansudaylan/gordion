@@ -14,10 +14,38 @@ from gordion.lagrange import (
 )
 from gordion.phase_space import (
     HaloModel,
+    PhaseSpaceEnsemble,
     _sample_halo_velocity,
     sample_unbound_phase_space,
     simulate_capture_trajectories,
 )
+
+
+@pytest.mark.parametrize('field', ['position_m', 'velocity_m_s', 'weight'])
+@pytest.mark.parametrize('invalid_kind', ['masked', 'complex'])
+def test_phase_space_rejects_hidden_or_complex_physical_values(field, invalid_kind):
+    values = {'position_m': np.array([[1., 2., 3.]]),
+              'velocity_m_s': np.array([[4., 5., 6.]]), 'weight': np.ones(1)}
+    if invalid_kind == 'masked':
+        values[field] = np.ma.array(values[field], mask=True)
+    else:
+        values[field] = values[field].astype(complex) + 1j
+    with pytest.raises(ValueError, match='unmasked real'):
+        PhaseSpaceEnsemble(**values)
+
+
+@pytest.mark.parametrize('container', [np.asarray, np.ma.asarray, list])
+def test_phase_space_preserves_valid_real_coordinates_and_weights(container):
+    position = np.array([[1., 2., 3.], [4., 5., 6.]])  # [m]
+    velocity = np.array([[7., 8., 9.], [10., 11., 12.]])  # [m/s]
+    weight = np.array([0., 2.])
+    supplied = [container(values) for values in (position, velocity, weight)]
+    snapshots = [np.asanyarray(values).copy() for values in supplied]
+    ensemble = PhaseSpaceEnsemble(*supplied)
+    np.testing.assert_array_equal(ensemble.coordinates, np.column_stack((position, velocity)))
+    np.testing.assert_array_equal(ensemble.weight, weight)
+    for values, snapshot in zip(supplied, snapshots):
+        np.testing.assert_array_equal(values, snapshot)
 
 
 def test_unbound_samples_are_finite_six_dimensional_and_focused():

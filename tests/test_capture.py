@@ -1,5 +1,7 @@
 """Regression tests for the Asteria-compatible capture-rate implementation."""
 
+from decimal import Decimal, localcontext
+
 import numpy as np
 import pytest
 import subprocess
@@ -12,7 +14,7 @@ from gordion.bodies import (
     two_layer_exoplanet,
 )
 from gordion import evolve_capture_annihilation
-from gordion.capture import AsteriaCapture, CaptureModel, NuclearSpecies
+from gordion.capture import AsteriaCapture, CaptureModel, NuclearSpecies, _capture_probability
 
 
 JUPITER_RADIUS_M = 7.0e7  # [m]
@@ -186,6 +188,44 @@ def test_zero_cross_section_has_zero_capture(jupiter_capture):
     )
     assert result.rate_per_second == 0.0
     assert result.regime == "no-scattering"
+
+
+@pytest.mark.parametrize("scale_from_nucleon", [True, False])
+def test_zero_cross_section_has_zero_optical_depth(jupiter_capture, scale_from_nucleon):
+    optical_depth = jupiter_capture.optical_depth(
+        JUPITER_RADIUS_M, JUPITER_MASS_KG, 10.0, 0.0,
+        scale_from_nucleon=scale_from_nucleon,
+    )
+
+    assert optical_depth == 0.0
+
+
+@pytest.mark.parametrize("dm_mass_gev", [1e-12, 1e-6, 16.0, 1e6, 1e10, 1e14])
+@pytest.mark.parametrize("escape_m_s", [1000.0, 10000.0, 60000.0])
+def test_capture_probability_matches_high_precision_mass_and_speed_limits(dm_mass_gev, escape_m_s):
+    speed_m_s = 270000.0  # [m/s]
+    target_mass_gev = 16.0  # [GeV]
+    scatters = 10.0
+    with localcontext() as context:
+        context.prec = 80
+        speed, escape, particle, target, count = map(
+            lambda value: Decimal(str(value)),
+            (speed_m_s, escape_m_s, dm_mass_gev, target_mass_gev, scatters),
+        )
+        focusing = Decimal('1.5') * (escape / speed) ** 2
+        mass_ratio = particle / target
+        alpha = 1 - 2 * mass_ratio / (1 + mass_ratio) ** 2
+        inverse = alpha ** (-count)
+        expected = 1 - (-focusing * (inverse - 1)).exp() * (1 + focusing * inverse) / (1 + focusing)
+
+    actual = _capture_probability(speed_m_s, escape_m_s, dm_mass_gev, target_mass_gev, scatters)
+
+    assert actual > 0.0
+    assert actual == pytest.approx(float(expected), rel=1e-12, abs=0.0)
+
+
+def test_capture_probability_reaches_saturation_without_inverse_power_overflow():
+    assert _capture_probability(270000.0, 10000.0, 16.0, 16.0, 2000.0) == 1.0
 
 
 def test_composition_is_instance_scoped():

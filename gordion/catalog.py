@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 from dataclasses import dataclass
+from math import isfinite
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -36,11 +37,12 @@ class ExoplanetRecord:
 
 def fetch_confirmed_exoplanets(*, refresh: bool = False,
                                cache_path: str | Path | None = None) -> list[ExoplanetRecord]:
-    """Load all catalog planets with mass, radius, period, and host mass.
+    """Load catalog planets with finite positive mass and radius.
 
     The first call downloads one NASA Exoplanet Archive TAP CSV snapshot. Later
     calls use the retained CSV unless ``refresh=True``. A planet's mass
     provenance is preserved because some catalog masses are minimum masses.
+    Unusable orbital periods and host-star masses remain unknown.
     """
 
     path = Path(cache_path) if cache_path is not None else get_data_path() / "exoplanet_archive" / "planetary_systems.csv"
@@ -61,7 +63,7 @@ def fetch_confirmed_exoplanets(*, refresh: bool = False,
             radius = float(row["pl_radj"])
         except (TypeError, ValueError):
             continue
-        if min(mass, radius) <= 0.0:
+        if not isfinite(mass) or not isfinite(radius) or min(mass, radius) <= 0.0:
             continue
         try:
             period = float(row["pl_orbper"])
@@ -71,9 +73,9 @@ def fetch_confirmed_exoplanets(*, refresh: bool = False,
             host_mass = float(row["st_mass"])
         except (TypeError, ValueError):
             host_mass = None
-        if period is not None and period <= 0.0:
+        if period is not None and (not isfinite(period) or period <= 0.0):
             period = None
-        if host_mass is not None and host_mass <= 0.0:
+        if host_mass is not None and (not isfinite(host_mass) or host_mass <= 0.0):
             host_mass = None
         records.append(ExoplanetRecord(
             name=row.get("pl_name", ""),
@@ -85,5 +87,5 @@ def fetch_confirmed_exoplanets(*, refresh: bool = False,
             host_mass_solar=host_mass,
         ))
     if not records:
-        raise ValueError("No catalog rows have positive mass, radius, period, and host mass")
+        raise ValueError("No catalog rows have finite positive mass and radius")
     return records

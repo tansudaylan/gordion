@@ -41,6 +41,9 @@ class PhaseSpaceEnsemble:
     weight: np.ndarray
 
     def __post_init__(self) -> None:
+        if any(np.ma.is_masked(values) or np.iscomplexobj(values)
+               for values in (self.position_m, self.velocity_m_s, self.weight)):
+            raise ValueError("phase-space coordinates and weights must be unmasked real values")
         position = np.asarray(self.position_m, dtype=float)
         velocity = np.asarray(self.velocity_m_s, dtype=float)
         weight = np.asarray(self.weight, dtype=float)
